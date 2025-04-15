@@ -259,10 +259,27 @@ RCT_EXPORT_METHOD(isConnectedAsync:(RCTPromiseResolveBlock)resolve reject:(RCTPr
     });
 }
 
-RCT_EXPORT_METHOD(playUri:(NSString*)uri resolve:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject){
-    [self usePlayerApi:^(id<SPTAppRemotePlayerAPI>player) {
-        [player play:uri callback:[RNSpotifyRemoteAppRemote defaultSpotifyRemoteCallback:resolve reject:reject]];
-    } reject:reject];
+RCT_EXPORT_METHOD(playUri:(NSString*)uri resolve:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject) {
+    DLog(@"Attempting to play URI: %@", uri);
+    RCTExecuteOnMainQueue(^{
+        if(self->_appRemote != nil && self->_appRemote.playerAPI != nil && [self isConnected]) {
+            DLog(@"AppRemote is connected. Sending play command.");
+            [self->_appRemote.playerAPI play:uri callback:[RNSpotifyRemoteAppRemote defaultSpotifyRemoteCallback:resolve reject:reject]];
+        } else {
+            DLog(@"AppRemote not connected. Attempting to authorize and play.");
+            
+            [self->_appRemote authorizeAndPlayURI:uri
+                                          asRadio:NO
+                                completionHandler:^(BOOL success) {
+                if (success) {
+                    DLog(@"authorizeAndPlayURI returned success");
+                } else {
+                    DLog(@"authorizeAndPlayURI returned false");
+                    reject(@"player_api_error", @"authorizeAndPlayURI returned false", nil);
+                }
+            }];
+        }
+    });
 }
 
 RCT_EXPORT_METHOD(playItem:(NSDictionary*)item resolve:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject){

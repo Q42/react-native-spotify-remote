@@ -8,6 +8,7 @@
 #import "RNSpotifyRemoteError.h"
 #import "RNSpotifyRemotePromise.h"
 #import "RNSpotifyRemoteSubscriptionCallback.h"
+#import "RNSpotifyRemoteAppRemote.h"
 #import "Macros.h"
 #define SPOTIFY_API_BASE_URL @"https://api.spotify.com/"
 #define SPOTIFY_API_URL(endpoint) [NSURL URLWithString:NSString_concat(SPOTIFY_API_BASE_URL, endpoint)]
@@ -95,6 +96,9 @@ static RNSpotifyRemoteAuth *sharedInstance = nil;
         }
         returnVal = [_sessionManager application:application openURL:URL options:options];
     }
+    [[RNSpotifyRemoteAppRemote sharedInstance] connect:nil resolve:^(id result) {
+            } reject:^(NSString *code, NSString *message, NSError *error) {
+            }];
     if(returnVal){
 //        [self resolveCompletions:_sessionManagerCallbacks result:nil];
     }
@@ -252,24 +256,15 @@ RCT_EXPORT_METHOD(authorize:(NSDictionary*)options resolve:(RCTPromiseResolveBlo
     }
     
     // Initialize the auth flow
-    if (@available(iOS 11, *)) {
+    RCTExecuteOnMainQueue(^{
         RCTExecuteOnMainQueue(^{
-            // Use this on iOS 11 and above to take advantage of SFAuthenticationSession
             [ self->_sessionManager
-                 initiateSessionWithScope:scope
-                 options:SPTDefaultAuthorizationOption
+              initiateSessionWithScope:scope
+              options:SPTDefaultAuthorizationOption
+              campaign:nil
             ];
         });
-    } else {
-        RCTExecuteOnMainQueue(^{
-            // Use this on iOS versions < 11 to use SFSafariViewController
-            [ self->_sessionManager
-                initiateSessionWithScope:scope
-                options:SPTDefaultAuthorizationOption
-                presentingViewController:[UIApplication sharedApplication].keyWindow.rootViewController
-            ];
-        });
-    }
+    });
 }
 
 + (BOOL)requiresMainQueueSetup{
